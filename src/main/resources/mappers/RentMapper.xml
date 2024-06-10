@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jafa.repository.RentRepository">
+
+    <resultMap id="RentResultMap" type="com.jafa.domain.RentVO">
+        <id property="rentId" column="RENTID"/>
+        <result property="rentDate" column="RENTDATE"/>
+        <result property="returnDate" column="RETURNDATE"/>
+        <result property="bookId" column="BOOKID"/>
+        <result property="memberId" column="MEMBERID"/>
+        <result property="extensionCount" column="EXTENSIONCOUNT"/>
+    </resultMap>
+
+	<select id="searchRents" parameterType="map" resultMap="RentResultMap">
+	    SELECT EXTENSIONCOUNT, BOOKID, MEMBERID, RENTID, RENTDATE, RETURNDATE
+	    FROM TBL_RENT
+	    WHERE 1=1
+	    <if test="memberId != null and memberId != ''">
+	        AND MEMBERID = #{memberId}
+	    </if>
+	    <if test="startDate != null">
+	        AND RENTDATE &gt;= #{startDate}
+	    </if>
+	    <if test="endDate != null">
+	        AND RETURNDATE &lt;= #{endDate}
+	    </if>
+	</select>
+	
+    <select id="getRentById" parameterType="Long" resultMap="RentResultMap">
+	    SELECT EXTENSIONCOUNT, BOOKID, MEMBERID, RENTID, RENTDATE, RETURNDATE FROM TBL_RENT WHERE RENTID = #{rentId}
+	</select>
+
+	<!-- 관리자페이지 에서 모든 대출 내역 조회 -->
+    <select id="getAllRents" resultMap="RentResultMap">
+	    SELECT * FROM TBL_RENT
+	</select>
+
+	 <!-- 회원 ID로 대출 내역 조회 -->
+    <select id="getRentsByMemberId" parameterType="String" resultMap="RentResultMap">
+        SELECT RENTID, RENTDATE, RETURNDATE, BOOKID, MEMBERID, EXTENSIONCOUNT
+        FROM TBL_RENT
+        WHERE MEMBERID = #{memberId}
+    </select>
+
+    <insert id="saveRent" parameterType="com.jafa.domain.RentVO">
+        INSERT INTO TBL_RENT (RENTID, RENTDATE, RETURNDATE, MEMBERID, BOOKID)
+        VALUES (RENTID_seq.NEXTVAL, #{rentDate, jdbcType=TIMESTAMP}, #{returnDate, jdbcType=TIMESTAMP},
+        #{memberId, jdbcType=NUMERIC},#{bookId, jdbcType=NUMERIC})
+    </insert>
+
+    <update id="updateRent" parameterType="com.jafa.domain.RentVO">
+	    UPDATE TBL_RENT
+	    SET RENTDATE = #{rentDate, jdbcType=TIMESTAMP}, 
+	        RETURNDATE = #{returnDate, jdbcType=TIMESTAMP}, 
+	        EXTENSIONCOUNT = #{extensionCount, jdbcType=NUMERIC}
+	    WHERE RENTID = #{rentId, jdbcType=NUMERIC}
+	</update>
+
+    <delete id="deleteRent" parameterType="Long">
+        DELETE FROM TBL_RENT WHERE RENTID = #{rentId, jdbcType=NUMERIC}
+    </delete>
+
+    <!-- 대출 요청 처리 -->
+    <insert id="requestRent" parameterType="com.jafa.domain.RentVO">
+        INSERT INTO TBL_RENT (RENTID, RENTDATE, RETURNDATE, BOOKID, MEMBERID)
+        VALUES (RENTID_seq.NEXTVAL, SYSDATE, SYSDATE , #{bookId, jdbcType=NUMERIC}, #{memberId, jdbcType=NUMERIC})
+    </insert>
+
+    <!-- 도서 반납 처리 -->
+    <update id="returnBook" parameterType="Long">
+        UPDATE TBL_RENT
+        SET RETURNDATE = SYSDATE
+        WHERE RENTID = #{rentId, jdbcType=NUMERIC}
+    </update>
+
+    <!-- 대출 연장 처리 -->
+    <update id="extendRent">
+	    UPDATE TBL_RENT
+	    SET returnDate = #{newReturnDate, jdbcType=TIMESTAMP},
+	        extensionCount = #{extensionCount, jdbcType=NUMERIC}
+	    WHERE rentId = #{rentId, jdbcType=NUMERIC}
+	</update>
+
+ 	<select id="getNextRentId" resultType="java.lang.Long">
+        SELECT RENTID_seq.NEXTVAL FROM DUAL
+    </select>
+    
+    <select id="findByBook" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM TBL_RENT
+        WHERE bookId = #{bookId}
+          AND memberId = #{memberId}
+    </select>
+</mapper>

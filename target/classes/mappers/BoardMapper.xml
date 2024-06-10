@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jafa.repository.BoardRepository">
+	<sql id="criteria">
+	    <trim prefix="AND (" suffix=")" prefixOverrides="OR">
+	        <foreach collection="types" item="type">
+	            <choose>
+	                <when test="type == 'T'.toString()">
+	                    OR TITLE LIKE '%' || #{keyword} || '%'
+	                </when>
+	                <when test="type == 'C'.toString()">
+	                    OR CONTENT LIKE '%' || #{keyword} || '%'
+	                </when>
+	                <when test="type == 'W'.toString()">
+	                    OR WRITER LIKE '%' || #{keyword} || '%'
+	                </when>
+	            </choose>
+	        </foreach>
+	    </trim>
+	</sql>
+	
+	<sql id="criteria2">
+	    <trim prefix="(" suffix=")AND" prefixOverrides="OR">
+	        <foreach collection="types" item="type">
+	            <choose>
+	                <when test="type == 'T'.toString()">
+	                    OR TITLE LIKE '%' || #{keyword} || '%'
+	                </when>
+	                <when test="type == 'C'.toString()">
+	                    OR CONTENT LIKE '%' || #{keyword} || '%'
+	                </when>
+	                <when test="type == 'W'.toString()">
+	                    OR WRITER LIKE '%' || #{keyword} || '%'
+	                </when>
+	            </choose>
+	        </foreach>
+	    </trim>
+	</sql>
+
+	<select id="getList" resultType="board">
+	    <![CDATA[
+	    SELECT * FROM (
+	        SELECT /*+INDEX_DESC(tbl_board pk_board)*/
+	            ROWNUM AS rn, BNO, TITLE, CONTENT, WRITER, replyCnt, regDate, updateDate, likeHit, viewCnt, notice
+	        FROM (
+	            SELECT BNO, TITLE, CONTENT, WRITER, replyCnt, regDate, updateDate, likeHit, viewCnt, notice
+	            FROM tbl_board
+	            WHERE notice = 1
+	            ]]>
+    			<include refid="criteria"/> 	
+  	   		 	<![CDATA[ 
+	            UNION ALL
+	            SELECT BNO, TITLE, CONTENT, WRITER, replyCnt, regDate, updateDate, likeHit, viewCnt, notice
+	            FROM tbl_board
+	            WHERE notice = 0
+            	]]>
+    			<include refid="criteria"/> 	
+  	   		 	<![CDATA[ 
+  	   		 	ORDER BY notice DESC, BNO DESC
+  	   		) 
+	        WHERE ROWNUM <= #{maxRow}
+	    )
+	    WHERE rn > #{minRow}
+	    ]]>
+	</select>
+
+	<select id="getTotalCount" resultType="int">
+	    select count(bno) from tbl_board where
+	    <include refid="criteria2"/>
+	    bno >0
+	</select>
+    
+    <insert id="insert">
+    	insert into tbl_board(bno,title,content,writer,notice)
+    	values (seq_board.nextval,#{title},#{content},#{writer},#{notice})
+    </insert>
+    
+   	<insert id="insertSelectKey" keyColumn="bno" keyProperty="bno" useGeneratedKeys="true">
+  	    insert into tbl_board(bno,title,content,writer, notice)
+    	values (seq_board.nextval,#{title},#{content},#{writer}, #{notice})
+    </insert>
+    
+    <select id="read" resultType="board">
+    	select * from tbl_board where bno=#{bno}
+    </select>
+    
+    <delete id="delete">
+    	delete from tbl_board where bno=#{bno}
+    </delete>
+    
+    <update id="update">
+    	update tbl_board set
+    	title=#{title},
+    	content=#{content},
+    	writer=#{writer},
+    	notice=#{notice},
+    	updateDate = sysdate
+    	where bno=#{bno}
+    </update>
+    
+    <update id="updateReplyCnt">
+	  	update tbl_board set replyCnt = replyCnt + #{amount} where bno = #{bno}
+	</update>
+	
+	<update id="updateLikeCnt">
+		update tbl_board set likeHit = likeHit + #{amount} where bno = #{bno}
+	</update>
+	
+	<select id="getBoardsByWriter" resultMap="boardMap">
+	    SELECT * FROM tbl_board
+	    WHERE writer = #{writer}
+	</select>
+	
+	<resultMap type="board" id="boardMap">
+	    <id property="bno" column="bno" />
+	    <result property="title" column="title" />
+	    <result property="content" column="content" />
+	    <result property="writer" column="writer" />
+	    <result property="likeHit" column="likeHit" />
+	    <result property="regDate" column="regDate" />
+	    <result property="updateDate" column="updateDate" />
+	    <result property="replyCnt" column="replyCnt" />
+	    <result property="viewCnt" column="viewCnt" />
+	    <result property="notice" column="notice" />
+	</resultMap>
+	
+	<update id="viewCnt">
+		update tbl_board set viewCnt = viewCnt + #{amount} where bno = #{bno}
+	</update>
+	
+</mapper>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jafa.repository.ReplyRepository">
+	
+	<insert id="insert">
+		insert into tbl_reply (rno,bno,reply,replyer)
+		values (seq_reply.nextval, #{bno},#{reply},#{replyer})
+	</insert>
+	
+	<select id="read" resultType="replyVO">
+		select * from tbl_reply where rno=#{rno}
+	</select>
+	
+	<delete id="delete">
+		delete from tbl_reply where rno=#{rno}
+	</delete>
+	
+	<update id="update">
+		update tbl_reply set
+			reply=#{reply}, 
+			updateDate=sysdate
+		where rno=#{rno}
+	</update>
+	
+	<select id="getList" resultType="replyVO">
+	select * from 
+	(
+		select 
+			rownum rn, bno, rno, reply, replyer, replyDate, updateDate
+		from tbl_reply
+		where bno = #{bno}
+		<![CDATA[
+		and rownum <= #{criteria.maxRow}
+		]]> 
+	) 
+	where rn > #{criteria.minRow}
+	</select>
+    
+    <select id="getReplyCount" resultType="int">
+    	select count(rno) from tbl_reply where bno = #{bno}
+    </select>
+    
+    <select id="getReplyByReplyer" resultMap="replyMap">
+	    SELECT
+	        r.rno,
+	        r.bno,
+	        r.reply,
+	        r.replyer,
+	        r.replyDate,
+	        r.updateDate
+	    FROM
+	        tbl_reply r
+	    WHERE
+	        r.replyer = #{replyer}
+	</select>
+	
+	<resultMap type="ReplyVO" id="replyMap">
+	    <result property="rno" column="rno" />
+	    <result property="bno" column="bno" />
+	    <result property="reply" column="reply" />
+	    <result property="replyer" column="replyer" />
+	    <result property="replyDate" column="replyDate" />
+	    <result property="updateDate" column="updateDate" />
+	</resultMap>
+    
+</mapper>

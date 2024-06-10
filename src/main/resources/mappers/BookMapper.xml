@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jafa.repository.BookRepository">
+  <sql id="bookCriteria">
+	    <trim prefix="(" suffix=") AND " prefixOverrides="OR">
+	    	<foreach collection="types" item="type">
+	    		<trim prefix="OR">
+	    			<choose>
+	    				<when test="type=='T'.toString()">
+	    					TITLE like '%'||#{keyword}||'%'
+	    				</when>
+	    				<when test="type=='C'.toString()">
+	    					CONTENT like '%'||#{keyword}||'%'
+	    				</when>
+	    				<when test="type=='W'.toString()">
+	    					WRITER like '%'||#{keyword}||'%'
+	    				</when>	    				
+	    			</choose>
+	    		</trim>
+	    	</foreach>
+	    </trim>
+	</sql>
+	
+	<select id="getList" resultType="bookVO" >
+    <![CDATA[ 
+   	select * from 
+	(
+		select /*+INDEX_DESC(tbl_book pk_book)*/  
+    		ROWNUM as rn, BNO, TITLE, CONTENT, WRITER, PUBLISHER,available,category,
+    		 regDate, updateDate, replyCnt,likeHit,viewCnt 
+    		FROM tbl_book where
+    ]]>
+	<include refid="bookCriteria"/> 	
+    <![CDATA[
+ 	rownum <= #{maxRow}
+	    ) where rn > #{minRow} 
+	]]>
+	
+   </select>
+      <select id="getTotalCount" resultType="int">
+    	select count(bno) from tbl_book where
+    	<include refid="bookCriteria"/>
+    	bno > 0
+    </select>
+    
+    <insert id="insert">
+    	insert into tbl_book(bno,title,content,writer, publisher,category,available)
+    	values ((seq_book.nextval,#{title},#{content},#{writer},#{publisher},#{category},#{available})
+    </insert>
+    
+    <insert id="insertSelectKey" keyColumn="bno" keyProperty="bno" useGeneratedKeys="true">
+  	    insert into tbl_book(bno,title,content,writer, publisher, available, category)
+    	values (seq_book.nextval,#{title},#{content},#{writer},#{publisher}, #{available}, #{category})
+    </insert>
+    
+     <select id="read" resultType="bookVO">
+    	select * from tbl_book where bno=#{bno}
+    </select>
+    
+    <delete id="delete">
+    	delete from tbl_book where bno=#{bno}
+    </delete>
+    
+    <update id="update">
+    	update tbl_book set
+    	title=#{title},
+    	content=#{content},
+    	writer=#{writer},
+    	publisher = #{publisher},
+    	available = #{available},
+    	category = #{category}
+    	where bno=#{bno}
+    </update>
+    
+     <update id="updateReplyCnt">
+	  	update tbl_book set replyCnt = replyCnt + #{amount} where bno = #{bno}
+	</update>
+	
+	<update id="updateLikeCnt">
+		update tbl_book set likeHit = likeHit + #{amount} where bno = #{bno}
+	</update>
+	
+	<update id="viewCnt">
+		update tbl_book set viewCnt = viewCnt + #{amount} where bno = #{bno}
+	</update>
+	
+	 <select id="isAvailable" resultType="boolean">
+        SELECT available FROM tbl_book WHERE bno = #{bno}
+    </select>
+    
+     <update id="updateAvailability">
+        UPDATE tbl_book SET available = #{available} WHERE bno = #{bno}
+    </update>
+</mapper>
